@@ -1,0 +1,83 @@
+- name: start site data containers
+  docker: 
+    image: tutum/ubuntu-trusty 
+    name: "data_{{item['name']}}"
+    state: running
+    volumes: /home/wordpress/live-wordpress 
+    ports: 
+      - "{{item['data']['ssh_port']}}:22"
+  with_items: wordpress_instances
+  tags: 
+    - docker_change
+
+- name: start mysql database ambassador
+  docker:
+    image: svendowideit/ambassador
+    name: mysql_ambassador
+    state: running
+    expose: 3306
+    net: bridge
+    env:
+      DB_1_PORT_3306_TCP: "tcp://{{mysql_server_ip_address}}:3306"
+  tags: 
+    - docker_change
+
+- name: create wp_image directory
+  file: path=/home/vagrant/wp_image state=directory group=vagrant owner=vagrant mode=777
+
+- name: copy over the Dockerfile for wp_image
+  synchronize:
+    src: /Users/doulos/code/docker-wordpress-nginx-hhvm-varnish/
+    dest: /home/vagrant/wp_image
+    recursive: yes
+    rsync_opts: --exclude=.git --rsync-path="sudo rsync"
+    times: yes
+  tags: 
+    - docker_change
+
+- name: show me the files
+  shell: ls -la /home/vagrant/wp_image
+
+- name: build the docker file for varnish+nginx+wordpress_install containers
+  docker_image:
+    name: varnish-nginx-hhvm-wp
+    state: present
+    path: /home/vagrant/wp_image
+    nocache: True
+  tags: 
+    - docker_change
+
+- name: start varnish+nginx+wordpress_install containers
+  docker: 
+    image: varnish-nginx-hhvm-wp
+    name: "wp_{{item['name']}}"
+    state: running
+    volumes_from: "data_{{item['name']}}"
+    env: 
+      MYSQL_PASS: "{{mysql_password}}"
+      DB_1_ENV_MYSQL_PASS: "{{mysql_password}}"
+      DB_1_ENV_DB_USER: "admin"
+      DB_1_ENV_DB_NAME: "{{item['db_name']}}"
+    net: bridge
+    links: 
+      - "mysql_ambassador:db_1"
+    ports:
+      - "{{item['ssh_port']}}:22"
+      - "{{item['nginx']['https_port']}}:443"
+      - "{{item['nginx']['http_port']}}:9999"
+      - "{{item['varnish']['http_port']}}:80"
+  with_items: wordpress_instances
+  tags: 
+    - docker_change
+
+- name: open up a bunch of ports for machines
+  ufw: rule=allow port="{{item['varnish']['http_port']}}"
+  with_items: wordpress_instances
+
+- name: open up a bunch of ports for machines
+  ufw: rule=allow port="{{item['nginx']['http_port']}}"
+  with_items: wordpress_instances
+
+- name: open up a bunch of ports for machines
+  ufw: rule=allow port="{{item['nginx']['https_port']}}"
+  with_items: wordpress_instances

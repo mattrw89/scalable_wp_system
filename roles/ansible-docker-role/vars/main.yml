@@ -1,0 +1,6 @@
+---
+apt_key_url: https://get.docker.io/gpg
+apt_key_sig: A88D21E9
+apt_repository: deb https://get.docker.io/ubuntu docker main
+docker_opts: ""
+version: 0.12

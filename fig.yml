@@ -1,0 +1,50 @@
+dbData:
+  image: tutum/ubuntu-trusty
+  volumes: 
+    - /var/lib/mysql
+  ports:
+    - "49100:22"
+
+wpWeb1Data:
+  image: tutum/ubuntu-trusty
+  volumes:
+    - /home/wordpress/live_wordpress
+  ports: 
+    - "49101:22"
+
+dbload1:
+  image: tutum/mysql:5.6
+  command: /bin/bash -c "/create_db.sh wordpress_web1"
+  environment:
+    MYSQL_PASS: 1234567890
+  volumes_from:
+    - dbData
+
+dbload2:
+  image: tutum/mysql:5.6
+  environment:
+    MYSQL_PASS: 1234567890
+    DB_NAME: wordpress_web1
+    DB_USER: admin
+  ports:
+    - "3307:3306"
+  volumes_from:
+    - dbData
+
+dbAmbassador: 
+  image: svendowideit/ambassador
+  links:
+    - "db:db"
+  ports:
+    - "4001:3306"
+
+web:
+ build: /Users/doulos/code/docker-wordpress-nginx-hhvm-varnish/.
+ ports:
+   - "80:80"
+   - "444:443"
+   - "9999:9999"
+ links:
+   - db
+ volumes_from:
+   - wpWeb1Data

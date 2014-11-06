@@ -1,0 +1,14 @@
+---
+
+- hosts: all
+  roles:
+  - {role: common, sudo: yes}
+  - {role: ansible-docker-role, sudo: yes}
+
+- hosts: db
+  roles:
+  - {role: wordpress-db, sudo: yes}
+
+- hosts: wordpress_sites
+  roles:
+  - {role: wordpress-site, sudo: yes}

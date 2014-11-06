@@ -1,0 +1,43 @@
+---
+- name: make sure we can use HTTPS apt transport
+  apt: pkg=apt-transport-https state=installed
+
+- name: docker.io apt key
+  apt_key:
+    id: "{{ apt_key_sig }}"
+    url: "{{ apt_key_url }}"
+    state: present
+
+- name: docker.io repository
+  apt_repository:
+    repo: "{{ apt_repository }}"
+    update_cache: yes
+    state: present
+
+- name: install docker defaults
+  copy:
+    content: "DOCKER_OPTS=\"{{ docker_opts }}\""
+    dest: /etc/default/docker
+    owner: root
+    group: root
+    mode: 0744
+  notify:
+    - reload docker
+
+- name: install docker
+  apt: pkg=lxc-docker state=installed
+
+- name: ensure docker is running
+  service:
+    name: docker
+    enabled: yes
+    state: started
+
+- name: get python setuptools
+  apt: pkg=python-setuptools state=installed
+
+- name: get pip
+  shell: easy_install pip
+
+- name: get docker-py
+  shell: pip install docker-py

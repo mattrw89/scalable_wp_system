@@ -1,0 +1,67 @@
+- name: start db data container
+  docker: 
+    image: tutum/ubuntu-trusty 
+    name: wpData1 
+    state: running 
+    volumes: /var/lib/mysql 
+    ports: "49100:22"
+  sudo: true
+  tags:
+    - docker_change
+
+- name: create wordpress databases
+  docker: 
+    image: tutum/mysql
+    name: "wpdb_creation_{{item['name']}}"
+    state: present
+    volumes_from: wpData1 
+    env: "MYSQL_PASS={{mysql_password}}"
+    command: "/bin/bash -c \"/create_db.sh {{item['db_name']}}\""
+  sudo: true
+  with_items: wordpress_instances
+  tags: 
+    - db_init
+    - docker_change
+
+- name: remove database creation containers
+  docker:
+    image: tutum/mysql
+    name: "wpdb_creation_{{item['name']}}"
+    state: absent
+  sudo: true
+  with_items: wordpress_instances
+  tags:
+    - db_init
+    - docker_change
+
+- name: start mysql db
+  docker: 
+    image: tutum/mysql
+    name: db 
+    state: running 
+    volumes_from: wpData1 
+    env: "MYSQL_PASS={{mysql_password}}"
+    net: bridge
+    ports: 
+      - "3306:3306"
+    #ports: "{{internal_mysql_port}}:3306"
+  sudo: true
+  tags:
+    - db_container
+    - docker_change
+
+- name: start mysql ambassador
+  sudo: true
+  docker:
+    image: svendowideit/ambassador
+    name: mysql_ambassador
+    links: "db:db" 
+    ports: "3306:3306"
+    net: bridge
+    state: running
+  tags:
+    - docker_change
+
+- name: allow mysql ambassador port
+  sudo: true
+  ufw: rule=allow port=3306

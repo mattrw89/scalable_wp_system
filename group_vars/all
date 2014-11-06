@@ -1,0 +1,31 @@
+ubuntu_release: trusty
+logwatch_email: "{{ lookup('env', 'SCALABLE_WP_SYSTEM_LOGWATCH_EMAIL') }}"
+root_password: "{{ lookup('env','SCALABLE_WP_SYSTEM_ROOT_PW_HASH') }}"
+deploy_password: "{{ lookup('env','SCALABLE_WP_SYSTEM_DEPLOY_PW_HASH') }}"
+
+mysql_password: "{{ lookup('env','SCALABLE_WP_SYSTEM_MYSQL_PW') }}"
+mysql_server_ip_address: '192.168.77.21'
+db_mysql_server_port: 4001
+
+wordpress_instances:
+  - name: green_space_leaders
+    db_name: green_space_leaders
+    nginx: 
+      https_port: 9000
+      http_port:  8000
+    varnish:
+      http_port: 7000
+    data:
+      ssh_port: 49100
+    ssh_port: 48000
+
+  - name: shift_agent_labs
+    db_name: shift_agent_labs
+    nginx: 
+      https_port: 9001
+      http_port:  8001
+    varnish:
+      http_port: 7001
+    data:
+      ssh_port: 49101
+    ssh_port: 48001
